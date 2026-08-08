@@ -17,8 +17,10 @@ STATUSES = (COMING_SOON, JUST_OPENED, OPEN, CANCELLED)
 class Enrichment:
     """What the grounded model produced for a place. Written once at the flip."""
     status: str = COMING_SOON            # model's verdict on openness
-    confidence: float = 0.0              # 0..1
-    opening_date: Optional[str] = None   # real opening date if found (ISO)
+    confidence: float = 0.0              # 0..1 — confidence it is OPEN (drives flip)
+    facts_confidence: float = 0.0        # 0..1 — confidence the SPECIFICS below are sourced
+    display_name: Optional[str] = None   # real trading name if it differs from the permit dba
+    opening_date: Optional[str] = None   # ONLY if a source states it; else null (never guessed)
     hook: Optional[str] = None           # one-line "what makes it special"
     description: Optional[str] = None     # 1-2 sentence editorial card
     tags: List[str] = field(default_factory=list)

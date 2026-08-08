@@ -17,8 +17,9 @@ export async function generateMetadata(
   const p = placeBySlug(slug);
   if (!p) return { title: "Opening not found — New in SF" };
   const e = p.enrichment;
+  const name = (e && e.display_name) || p.dba_name;
   const where = p.neighborhood ? ` in ${p.neighborhood}` : "";
-  const title = `${p.dba_name} — ${statusLabel(p.status)}${where} | New in SF`;
+  const title = `${name} — ${statusLabel(p.status)}${where} | New in SF`;
   const description =
     (e && (e.description || e.hook)) ||
     `${p.dba_name} is a newly registered business at ${p.address}, San Francisco.`;
@@ -35,11 +36,12 @@ export default async function OpeningPage({ params }: { params: Promise<{ slug: 
   const p = placeBySlug(slug);
   if (!p) notFound();
   const e = p.enrichment;
+  const name = (e && e.display_name) || p.dba_name;
 
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "LocalBusiness",
-    name: p.dba_name,
+    name: name,
     address: { "@type": "PostalAddress", streetAddress: p.address, addressLocality: "San Francisco", addressRegion: "CA" },
     ...(p.lat != null ? { geo: { "@type": "GeoCoordinates", latitude: p.lat, longitude: p.lng } } : {}),
     ...(e && e.website ? { url: e.website } : {}),
@@ -49,7 +51,7 @@ export default async function OpeningPage({ params }: { params: Promise<{ slug: 
   return (
     <div className="detail">
       <Link className="back" href="/">← All SF openings</Link>
-      <h1>{p.dba_name}</h1>
+      <h1>{name}</h1>
       <div className="loc">{p.neighborhood ? `${p.neighborhood} · ` : ""}{p.address}</div>
       <span className={"badge " + (p.status === "coming_soon" ? "coming_soon" : "open")}>{statusLabel(p.status)}</span>
 

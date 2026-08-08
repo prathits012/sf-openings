@@ -4,6 +4,8 @@ import path from "path";
 export type Enrichment = {
   status: string;
   confidence: number;
+  facts_confidence?: number;
+  display_name?: string | null;
   opening_date: string | null;
   hook: string | null;
   description: string | null;

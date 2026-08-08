@@ -113,6 +113,10 @@ OPEN_CONFIDENCE_THRESHOLD = float(os.environ.get("OPEN_CONFIDENCE_THRESHOLD", "0
 REQUEST_DELAY_SEC = float(os.environ.get("REQUEST_DELAY_SEC", "1.5"))
 CHECKPOINT_EVERY = int(os.environ.get("CHECKPOINT_EVERY", "20"))
 
+# Re-enrich EVERY non-cancelled place on this run (used after a prompt change to
+# correct existing cards), instead of only the ones due on the normal cadence.
+FORCE_REENRICH = os.environ.get("FORCE_REENRICH", "").lower() in ("1", "true", "yes")
+
 # ---------------------------------------------------------------------------
 # Output
 # ---------------------------------------------------------------------------

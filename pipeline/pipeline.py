@@ -15,6 +15,7 @@ from config import (
     OPEN_CONFIDENCE_THRESHOLD,
     REQUEST_DELAY_SEC,
     CHECKPOINT_EVERY,
+    FORCE_REENRICH,
 )
 from enrich import enrich
 from fetch import discover
@@ -44,7 +45,10 @@ def _merge_discovered(existing: Dict[str, Place], found: List[Place]) -> int:
 
 def _due_for_check(p: Place) -> bool:
     """Enrich brand-new coming_soon places, and re-check coming_soon ones on a
-    cadence. Never re-ground places already open or cancelled."""
+    cadence. Never re-ground places already open or cancelled — unless
+    FORCE_REENRICH is set (used to correct all cards after a prompt change)."""
+    if FORCE_REENRICH:
+        return p.status != CANCELLED
     if p.status != COMING_SOON:
         return False
     if not p.last_checked:

@@ -19,20 +19,22 @@ from models import Place, Enrichment, COMING_SOON, JUST_OPENED, OPEN
 from store import now_iso
 
 _PROMPT = """You are researching whether a newly-registered San Francisco business \
-has actually opened to the public yet, and writing a short listing for it.
+has actually opened to the public yet, and writing a short, ACCURATE listing for it.
 
-Business name: {name}
+Permit-registered name: {name}
 Address: {address}, San Francisco
 Business permit filed: {permit_start}
 
-Search the web (news like Eater SF / Hoodline / SF Chronicle, the business's own \
-site, Instagram, Google Maps reviews) and decide its CURRENT status. The permit \
-date is NOT the opening date — places often open months later, and some never open.
+Search the web (Eater SF / Hoodline / SF Chronicle / WhatNowSF, the business's own \
+site, Instagram, Google Maps) and decide its CURRENT status. The permit date is NOT \
+the opening date — places open months later, and some never open.
 
-Return ONLY a JSON object, no prose, with these fields:
+Return ONLY a JSON object, no prose:
 {{
   "status": "coming_soon" | "just_opened" | "open",
   "confidence": 0.0-1.0,
+  "facts_confidence": 0.0-1.0,
+  "display_name": "the name the place actually trades under, or null",
   "opening_date": "YYYY-MM-DD or null",
   "hook": "one short line on what makes it notable, or null",
   "description": "1-2 sentence editorial description, or null",
@@ -42,11 +44,23 @@ Return ONLY a JSON object, no prose, with these fields:
   "sources": ["urls you actually used"]
 }}
 
-Rules:
+ACCURACY RULES — do not guess. A blank field is better than a wrong one:
+- "confidence" = how sure you are it is OPEN. "facts_confidence" = how sure you are \
+that the specifics (date, name, concept) below come from a real source, not inference.
+- "opening_date": include ONLY if a source explicitly states the opening date. If no \
+source states an exact date, use null. NEVER approximate, infer, or guess a date.
+- "display_name": the permit name is often wrong or a placeholder. If sources \
+consistently call the place something else, put that real name here; else null. Do \
+not invent a name.
+- "hook"/"description": state only what sources support. No invented chefs, owners, \
+menus, or backstory. If you found little, keep it factual and short (or null).
+- Every specific claim should be traceable to one of your "sources".
+
+STATUS RULES:
 - "coming_soon": permitted / under build-out / announced but not yet serving customers.
 - "just_opened": opened within roughly the last 3 weeks (fresh press or first reviews).
 - "open": operating for a while.
-- If you find no evidence it is open, use "coming_soon" with low confidence.
+- No evidence it is open -> "coming_soon" with low confidence.
 """
 
 
@@ -119,6 +133,8 @@ def _gemini(place: Place) -> Optional[Enrichment]:
             return Enrichment(
                 status=status,
                 confidence=float(data.get("confidence") or 0.0),
+                facts_confidence=float(data.get("facts_confidence") or 0.0),
+                display_name=data.get("display_name") or None,
                 opening_date=data.get("opening_date"),
                 hook=data.get("hook"),
                 description=data.get("description"),

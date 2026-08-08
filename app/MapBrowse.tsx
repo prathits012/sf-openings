@@ -28,6 +28,7 @@ const statusLabel = (s: string) =>
 const hasStory = (p: P) =>
   !!(p.enrichment && p.enrichment.model && p.enrichment.model !== "stub-no-key" &&
      (p.enrichment.description || p.enrichment.hook));
+const nameOf = (p: P) => (p.enrichment && p.enrichment.display_name) || p.dba_name;
 
 export default function MapBrowse({ places }: { places: P[] }) {
   const [filter, setFilter] = useState("all");
@@ -153,7 +154,7 @@ export default function MapBrowse({ places }: { places: P[] }) {
       popupRef.current = new maplibregl.Popup({ offset: 14, closeButton: false })
         .setLngLat([p.lng, p.lat])
         .setHTML(
-          `<div class="pn">${esc(p.dba_name)}</div><div class="ph">${esc(p.neighborhood || "")} · ${statusLabel(p.status)}</div>` +
+          `<div class="pn">${esc(nameOf(p))}</div><div class="ph">${esc(p.neighborhood || "")} · ${statusLabel(p.status)}</div>` +
             (e.description ? `<div class="pd">${esc(e.description)}</div>` : "")
         )
         .addTo(map);
@@ -206,7 +207,7 @@ export default function MapBrowse({ places }: { places: P[] }) {
                    onClick={() => selectPlace(p.uniqueid, true)}>
                 <div className="top">
                   <div>
-                    <div className="name">{p.dba_name}</div>
+                    <div className="name">{nameOf(p)}</div>
                     <div className="hood">{p.neighborhood || "San Francisco"} · {p.address}</div>
                   </div>
                   <span className={"badge " + statusClass(p.status)}>{statusLabel(p.status)}</span>
