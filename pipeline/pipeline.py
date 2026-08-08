@@ -6,10 +6,16 @@ work: we compare each place's NEW status against the one we stored last run.
 """
 from __future__ import annotations
 
+import time
 from datetime import datetime, timedelta, timezone
 from typing import Dict, List, Tuple
 
-from config import RECHECK_COMING_SOON_DAYS, OPEN_CONFIDENCE_THRESHOLD
+from config import (
+    RECHECK_COMING_SOON_DAYS,
+    OPEN_CONFIDENCE_THRESHOLD,
+    REQUEST_DELAY_SEC,
+    CHECKPOINT_EVERY,
+)
 from enrich import enrich
 from fetch import discover
 from models import Place, COMING_SOON, JUST_OPENED, OPEN, CANCELLED
@@ -68,8 +74,15 @@ def run(enrich_limit: int = None) -> dict:
 
     flips: List[Tuple[str, str, str]] = []  # (uniqueid, from_status, to_status)
     enriched = 0
-    for p in due:
+    failed = 0
+    for i, p in enumerate(due):
         result = enrich(p)
+        if result is None:
+            # Transient failure (rate limit / overload). Leave the place
+            # retryable — do NOT advance last_checked — and move on.
+            failed += 1
+            continue
+
         p.last_checked = now_iso()
         prior_status = p.status
 
@@ -86,6 +99,13 @@ def run(enrich_limit: int = None) -> dict:
 
         if p.status != prior_status:
             flips.append((p.uniqueid, prior_status, p.status))
+
+        # Checkpoint so a long backlog run never loses progress, and pace calls
+        # to stay under free-tier rate limits.
+        if CHECKPOINT_EVERY and enriched % CHECKPOINT_EVERY == 0:
+            save_places(places)
+        if REQUEST_DELAY_SEC and i < len(due) - 1:
+            time.sleep(REQUEST_DELAY_SEC)
 
     just_opened_flips = [
         f for f in flips if f[1] == COMING_SOON and f[2] in (JUST_OPENED, OPEN)

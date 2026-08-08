@@ -108,6 +108,11 @@ RECHECK_COMING_SOON_DAYS = int(os.environ.get("RECHECK_COMING_SOON_DAYS", "7"))
 # status (and fire a notification, in later phases).
 OPEN_CONFIDENCE_THRESHOLD = float(os.environ.get("OPEN_CONFIDENCE_THRESHOLD", "0.7"))
 
+# Pace grounded calls to stay under free-tier rate limits, and checkpoint the
+# openings.json periodically so a long backlog run never loses progress.
+REQUEST_DELAY_SEC = float(os.environ.get("REQUEST_DELAY_SEC", "1.5"))
+CHECKPOINT_EVERY = int(os.environ.get("CHECKPOINT_EVERY", "20"))
+
 # ---------------------------------------------------------------------------
 # Output
 # ---------------------------------------------------------------------------

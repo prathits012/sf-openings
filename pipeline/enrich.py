@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import json
 import re
+import time
 from typing import Optional
 
 from config import ENRICH_MODEL, GEMINI_API_KEY
@@ -90,49 +91,64 @@ def _gemini(place: Place) -> Optional[Enrichment]:
     except ImportError:
         return None
 
-    try:
-        client = genai.Client(api_key=GEMINI_API_KEY)
-        prompt = _PROMPT.format(
-            name=place.dba_name,
-            address=place.address,
-            permit_start=place.permit_start or "unknown",
-        )
-        resp = client.models.generate_content(
-            model=ENRICH_MODEL,
-            contents=prompt,
-            config=types.GenerateContentConfig(
-                tools=[types.Tool(google_search=types.GoogleSearch())],
-                temperature=0.2,
-            ),
-        )
-        data = _extract_json(getattr(resp, "text", "") or "")
-        if not data:
+    prompt = _PROMPT.format(
+        name=place.dba_name,
+        address=place.address,
+        permit_start=place.permit_start or "unknown",
+    )
+    client = genai.Client(api_key=GEMINI_API_KEY)
+    cfg = types.GenerateContentConfig(
+        tools=[types.Tool(google_search=types.GoogleSearch())],
+        temperature=0.2,
+    )
+    # Retry transient rate-limit / overload errors with backoff; return None on
+    # any failure so the caller leaves the place RETRYABLE (does not mark it
+    # checked). That's what keeps a rate-limited burst from permanently stubbing
+    # places for a week.
+    for attempt in range(3):
+        try:
+            resp = client.models.generate_content(
+                model=ENRICH_MODEL, contents=prompt, config=cfg
+            )
+            data = _extract_json(getattr(resp, "text", "") or "")
+            if not data:
+                return None
+            status = data.get("status")
+            if status not in (COMING_SOON, JUST_OPENED, OPEN):
+                status = COMING_SOON
+            return Enrichment(
+                status=status,
+                confidence=float(data.get("confidence") or 0.0),
+                opening_date=data.get("opening_date"),
+                hook=data.get("hook"),
+                description=data.get("description"),
+                tags=list(data.get("tags") or []),
+                website=data.get("website"),
+                instagram=data.get("instagram"),
+                sources=list(data.get("sources") or []),
+                model=ENRICH_MODEL,
+                generated_at=now_iso(),
+            )
+        except Exception as exc:  # noqa: BLE001 — never let one bad call kill the run
+            msg = str(exc).lower()
+            transient = any(t in msg for t in ("429", "resource_exhausted", "rate", "503", "overloaded", "unavailable"))
+            if transient and attempt < 2:
+                time.sleep(2 ** attempt * 3)  # 3s, 6s
+                continue
+            print("  enrich error for %s: %s" % (place.dba_name, str(exc)[:120]))
             return None
-        status = data.get("status")
-        if status not in (COMING_SOON, JUST_OPENED, OPEN):
-            status = COMING_SOON
-        return Enrichment(
-            status=status,
-            confidence=float(data.get("confidence") or 0.0),
-            opening_date=data.get("opening_date"),
-            hook=data.get("hook"),
-            description=data.get("description"),
-            tags=list(data.get("tags") or []),
-            website=data.get("website"),
-            instagram=data.get("instagram"),
-            sources=list(data.get("sources") or []),
-            model=ENRICH_MODEL,
-            generated_at=now_iso(),
-        )
-    except Exception as exc:  # noqa: BLE001 — never let one bad call kill the run
-        print("  enrich error for %s: %s" % (place.dba_name, exc))
-        return None
+    return None
 
 
-def enrich(place: Place) -> Enrichment:
-    """Return an Enrichment for a place, degrading to a stub when unavailable."""
-    if GEMINI_API_KEY:
-        result = _gemini(place)
-        if result is not None:
-            return result
-    return _stub(place)
+def enrich(place: Place) -> Optional[Enrichment]:
+    """Enrich a place.
+
+    - No API key  -> deterministic offline stub (caller marks it checked; there
+      is nothing more to do without a key).
+    - Key present, call succeeds -> real Enrichment.
+    - Key present, call FAILS -> None, so the caller leaves it retryable and does
+      NOT advance last_checked (protects against rate-limited bursts).
+    """
+    if not GEMINI_API_KEY:
+        return _stub(place)
+    return _gemini(place)

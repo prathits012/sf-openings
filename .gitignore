@@ -3,6 +3,11 @@ __pycache__/
 *.pyc
 .venv/
 venv/
-# data/openings.json is a generated artifact; keep it out of git for now.
-data/openings.json
+# Next.js / Node
+node_modules/
+.next/
+next-env.d.ts
+.vercel/
+# openings.json IS committed on purpose: it's the data the Next.js/Vercel build
+# reads. The pipeline updates it and pushes; Vercel rebuilds. (No database.)
 data/*.tmp
