@@ -1,0 +1,4 @@
+# Discovery + prune + store use only the Python 3.9 stdlib — nothing required.
+# Enrichment uses the grounded model SDK. Optional: without a key the pipeline
+# still runs (enrichment degrades to a stub).
+google-genai>=0.3.0

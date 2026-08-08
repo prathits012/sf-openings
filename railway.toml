@@ -1,0 +1,9 @@
+[build]
+builder = "nixpacks"
+
+[deploy]
+# Weekly on Monday 08:00 UTC. openings.json persists between runs via a Railway
+# volume mounted at ./data (set DATA_DIR to the mount path if different).
+startCommand = "python pipeline/pipeline.py"
+cronSchedule = "0 8 * * 1"
+restartPolicyType = "never"

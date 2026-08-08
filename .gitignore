@@ -1,0 +1,8 @@
+.env
+__pycache__/
+*.pyc
+.venv/
+venv/
+# data/openings.json is a generated artifact; keep it out of git for now.
+data/openings.json
+data/*.tmp

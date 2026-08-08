@@ -1,0 +1,138 @@
+"""Layer 2b — liveness + enrichment in ONE grounded call.
+
+A single cheap grounded model (Gemini Flash-Lite with Google Search grounding)
+does both jobs at once: judge "is it open yet?" from fresh web results AND write
+the editorial card. Behind a thin wrapper so the model can be swapped.
+
+If no GEMINI_API_KEY is set (or the SDK isn't installed), enrichment degrades to
+a stub so the rest of the pipeline still runs end-to-end offline.
+"""
+from __future__ import annotations
+
+import json
+import re
+from typing import Optional
+
+from config import ENRICH_MODEL, GEMINI_API_KEY
+from models import Place, Enrichment, COMING_SOON, JUST_OPENED, OPEN
+from store import now_iso
+
+_PROMPT = """You are researching whether a newly-registered San Francisco business \
+has actually opened to the public yet, and writing a short listing for it.
+
+Business name: {name}
+Address: {address}, San Francisco
+Business permit filed: {permit_start}
+
+Search the web (news like Eater SF / Hoodline / SF Chronicle, the business's own \
+site, Instagram, Google Maps reviews) and decide its CURRENT status. The permit \
+date is NOT the opening date — places often open months later, and some never open.
+
+Return ONLY a JSON object, no prose, with these fields:
+{{
+  "status": "coming_soon" | "just_opened" | "open",
+  "confidence": 0.0-1.0,
+  "opening_date": "YYYY-MM-DD or null",
+  "hook": "one short line on what makes it notable, or null",
+  "description": "1-2 sentence editorial description, or null",
+  "tags": ["lowercase", "vibe", "tags"],
+  "website": "url or null",
+  "instagram": "@handle or url or null",
+  "sources": ["urls you actually used"]
+}}
+
+Rules:
+- "coming_soon": permitted / under build-out / announced but not yet serving customers.
+- "just_opened": opened within roughly the last 3 weeks (fresh press or first reviews).
+- "open": operating for a while.
+- If you find no evidence it is open, use "coming_soon" with low confidence.
+"""
+
+
+def _stub(place: Place) -> Enrichment:
+    """Offline fallback: no verdict flip, just record that we couldn't check."""
+    return Enrichment(
+        status=COMING_SOON,
+        confidence=0.0,
+        description=None,
+        hook=None,
+        model="stub-no-key",
+        generated_at=now_iso(),
+    )
+
+
+def _extract_json(text: str) -> Optional[dict]:
+    # Grounding responses sometimes wrap JSON in markdown/backticks or prose.
+    if not text:
+        return None
+    fence = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", text, re.DOTALL)
+    raw = fence.group(1) if fence else None
+    if raw is None:
+        brace = re.search(r"\{.*\}", text, re.DOTALL)
+        raw = brace.group(0) if brace else None
+    if raw is None:
+        return None
+    try:
+        return json.loads(raw)
+    except (ValueError, TypeError):
+        return None
+
+
+def _gemini(place: Place) -> Optional[Enrichment]:
+    """Real grounded call. Returns None on any failure so caller can fall back.
+
+    NOTE: verify the exact model id and grounding config against the current
+    google-genai SDK before relying on this in production.
+    """
+    try:
+        from google import genai
+        from google.genai import types
+    except ImportError:
+        return None
+
+    try:
+        client = genai.Client(api_key=GEMINI_API_KEY)
+        prompt = _PROMPT.format(
+            name=place.dba_name,
+            address=place.address,
+            permit_start=place.permit_start or "unknown",
+        )
+        resp = client.models.generate_content(
+            model=ENRICH_MODEL,
+            contents=prompt,
+            config=types.GenerateContentConfig(
+                tools=[types.Tool(google_search=types.GoogleSearch())],
+                temperature=0.2,
+            ),
+        )
+        data = _extract_json(getattr(resp, "text", "") or "")
+        if not data:
+            return None
+        status = data.get("status")
+        if status not in (COMING_SOON, JUST_OPENED, OPEN):
+            status = COMING_SOON
+        return Enrichment(
+            status=status,
+            confidence=float(data.get("confidence") or 0.0),
+            opening_date=data.get("opening_date"),
+            hook=data.get("hook"),
+            description=data.get("description"),
+            tags=list(data.get("tags") or []),
+            website=data.get("website"),
+            instagram=data.get("instagram"),
+            sources=list(data.get("sources") or []),
+            model=ENRICH_MODEL,
+            generated_at=now_iso(),
+        )
+    except Exception as exc:  # noqa: BLE001 — never let one bad call kill the run
+        print("  enrich error for %s: %s" % (place.dba_name, exc))
+        return None
+
+
+def enrich(place: Place) -> Enrichment:
+    """Return an Enrichment for a place, degrading to a stub when unavailable."""
+    if GEMINI_API_KEY:
+        result = _gemini(place)
+        if result is not None:
+            return result
+    return _stub(place)
