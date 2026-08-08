@@ -6,6 +6,34 @@ from __future__ import annotations
 
 import os
 
+
+def _load_dotenv() -> None:
+    """Load KEY=VALUE lines from a sibling .env into os.environ (if present).
+
+    Tiny stdlib parser so there's no dependency and real env vars always win
+    (we never overwrite an already-set variable).
+    """
+    here = os.path.dirname(os.path.abspath(__file__))
+    for path in (
+        os.path.join(here, ".env"),
+        os.path.join(here, os.pardir, ".env"),
+    ):
+        if not os.path.exists(path):
+            continue
+        with open(path, "r", encoding="utf-8") as fh:
+            for line in fh:
+                line = line.strip()
+                if not line or line.startswith("#") or "=" not in line:
+                    continue
+                key, _, val = line.partition("=")
+                key, val = key.strip(), val.strip().strip('"').strip("'")
+                if key and key not in os.environ:
+                    os.environ[key] = val
+        break
+
+
+_load_dotenv()
+
 # ---------------------------------------------------------------------------
 # DataSF discovery
 # ---------------------------------------------------------------------------
