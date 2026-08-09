@@ -83,3 +83,16 @@ notification banked months ahead of the food press.
 The pipeline IS the marketing: programmatic SEO (one page per opening — the #1
 channel) + a weekly "what opened in SF" newsletter, both auto-fed. No paid ads
 early.
+
+## Known limitations (deferred, on purpose)
+- **Map pins for named complexes / malls / suite addresses are sometimes off.**
+  Root cause is DataSF's own geocode for place-name addresses like "3 Embarcadero
+  Ctr Ste 3109" (we plot their coordinate faithfully). Free street geocoders
+  (US Census) don't fix it — they resolve the ambiguous name to a different point.
+  Normal street addresses are accurate (verified). **Deferred fix:** add a
+  POI-aware geocoder (Google Places / Mapbox, needs a key) as a fallback for the
+  small tail of complex/mall addresses only. Most pins are correct; not blocking.
+- **Opening dates err toward null** — the model only asserts a date when a source
+  states it, so some real dates (that exist on the web) come back blank. Later:
+  tune it to hunt harder for a *sourced* date without ever guessing.
+- **No hero photos** — grounding returns no reliable image; skipped for MVP.
