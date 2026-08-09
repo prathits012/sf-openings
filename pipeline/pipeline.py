@@ -92,10 +92,16 @@ def run(enrich_limit: int = None) -> dict:
 
         verdict = result.status
         confident = result.confidence >= OPEN_CONFIDENCE_THRESHOLD
-        # Only flip forward, and only when confident. A low-confidence "open"
-        # leaves it as coming_soon until evidence firms up.
+        # Derive status from the latest confident verdict — not forward-only. A
+        # place is "open" only while the newest assessment confidently says so;
+        # a low-confidence "open" (e.g. the brand exists elsewhere but THIS
+        # address isn't serving yet) reverts to coming_soon. Normal cadence never
+        # re-checks open places, so this only demotes during a forced re-pass —
+        # exactly when we want to correct a wrong status.
         if verdict in (JUST_OPENED, OPEN) and confident:
             p.status = verdict
+        else:
+            p.status = COMING_SOON
         # Always keep the latest card content (even while still coming_soon we
         # may now have a teaser/description).
         p.enrichment = result.to_dict()

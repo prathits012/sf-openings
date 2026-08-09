@@ -56,11 +56,15 @@ not invent a name.
 menus, or backstory. If you found little, keep it factual and short (or null).
 - Every specific claim should be traceable to one of your "sources".
 
-STATUS RULES:
-- "coming_soon": permitted / under build-out / announced but not yet serving customers.
-- "just_opened": opened within roughly the last 3 weeks (fresh press or first reviews).
-- "open": operating for a while.
-- No evidence it is open -> "coming_soon" with low confidence.
+STATUS RULES — judge THIS specific address, not the brand:
+- Decide whether customers can walk into THIS address ({address}) today. Many of \
+these are NEW OUTPOSTS of an existing business. If the brand is open elsewhere but \
+THIS location is not yet serving customers, that is "coming_soon" (with low \
+"confidence"), NOT "open".
+- "coming_soon": permitted / under build-out / announced but not yet serving at this address.
+- "just_opened": THIS location opened within roughly the last 3 weeks (fresh press / first reviews).
+- "open": THIS location has been operating for a while.
+- No evidence THIS location is open -> "coming_soon" with low confidence.
 """
 
 

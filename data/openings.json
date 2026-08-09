@@ -1,7 +1,7 @@
 {
   "meta": {
     "generated_at": "2026-08-08T21:38:32.741892+00:00",
-    "count": 431,
+    "count": 417,
     "new_candidates": 0,
     "ghosts_pruned": 0,
     "enriched": 417,
@@ -441,7 +441,7 @@
       "lng": -122.4266445,
       "permit_start": "2026-08-01",
       "permit_end": null,
-      "status": "open",
+      "status": "coming_soon",
       "first_seen": "2026-08-08T20:43:55.106683+00:00",
       "last_checked": "2026-08-08T21:16:55.884890+00:00",
       "enrichment": {
@@ -3555,7 +3555,7 @@
       "lng": -122.419503,
       "permit_start": "2026-07-13",
       "permit_end": null,
-      "status": "just_opened",
+      "status": "coming_soon",
       "first_seen": "2026-08-08T20:43:55.107432+00:00",
       "last_checked": "2026-08-08T21:21:48.971610+00:00",
       "enrichment": {
@@ -4137,7 +4137,7 @@
       "lng": -122.421645,
       "permit_start": "2026-07-07",
       "permit_end": null,
-      "status": "open",
+      "status": "coming_soon",
       "first_seen": "2026-08-08T20:43:55.107533+00:00",
       "last_checked": "2026-08-08T21:22:42.898254+00:00",
       "enrichment": {
@@ -4867,7 +4867,7 @@
       "lng": -122.406939,
       "permit_start": "2026-07-01",
       "permit_end": null,
-      "status": "open",
+      "status": "coming_soon",
       "first_seen": "2026-08-08T20:43:55.107630+00:00",
       "last_checked": "2026-08-08T21:23:51.914757+00:00",
       "enrichment": {
@@ -5913,7 +5913,7 @@
       "lng": -122.4220275,
       "permit_start": "2026-06-29",
       "permit_end": null,
-      "status": "open",
+      "status": "coming_soon",
       "first_seen": "2026-08-08T20:43:55.107892+00:00",
       "last_checked": "2026-08-08T21:25:37.180810+00:00",
       "enrichment": {
@@ -6304,7 +6304,7 @@
       "lng": -122.388432556,
       "permit_start": "2026-06-25",
       "permit_end": null,
-      "status": "open",
+      "status": "coming_soon",
       "first_seen": "2026-08-08T20:43:55.107978+00:00",
       "last_checked": "2026-08-08T21:26:13.638411+00:00",
       "enrichment": {
@@ -7841,7 +7841,7 @@
       "lng": -122.4038655,
       "permit_start": "2026-06-01",
       "permit_end": null,
-      "status": "open",
+      "status": "coming_soon",
       "first_seen": "2026-08-08T20:43:55.108353+00:00",
       "last_checked": "2026-08-08T21:28:40.889706+00:00",
       "enrichment": {
