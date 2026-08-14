@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useSaves } from "../lib/useSaves";
+import { categoryOf, slugify } from "../lib/util";
 
 const COLORS: Record<string, string> = {
   open: "#3ddc84",
@@ -24,13 +25,28 @@ type P = {
   dba_name: string;
   address: string;
   neighborhood: string | null;
+  naics: string;
   lat: number | null;
   lng: number | null;
   status: string;
   permit_start: string | null;
+  flipped_at: string | null;
   slug: string;
   enrichment: any | null;
 };
+
+// "opened Nd ago" only when there's a real, sourced opening date within ~3 weeks.
+// (flipped_at is when WE detected it, which is misleading for the backfill batch.)
+function freshLabel(p: P): string | null {
+  if (p.status !== "open" && p.status !== "just_opened") return null;
+  const od = p.enrichment && p.enrichment.opening_date;
+  if (!od) return null;
+  const days = Math.floor((Date.now() - new Date(od).getTime()) / 86400000);
+  if (isNaN(days) || days > 21 || days < 0) return null;
+  if (days <= 0) return "just opened";
+  if (days === 1) return "opened yesterday";
+  return `opened ${days}d ago`;
+}
 
 const statusClass = (s: string) => (s === "coming_soon" ? "coming_soon" : "open");
 const statusLabel = (s: string) =>
@@ -246,7 +262,8 @@ export default function MapBrowse({ places }: { places: P[] }) {
         `<div class="pn">${esc(nameOf(p))}</div>` +
           `<div class="ph">${esc(p.neighborhood || "")} · ${statusLabel(p.status)}</div>` +
           (e.hook || e.description ? `<div class="pd">${esc(e.hook || e.description)}</div>` : "") +
-          `<a class="pl" href="/openings/${p.slug}">View details →</a>`
+          `<div class="prow"><a class="pl" href="/openings/${p.slug}">Details →</a>` +
+          `<a class="pl" target="_blank" rel="noopener" href="https://www.google.com/maps/dir/?api=1&destination=${p.lat},${p.lng}">Directions</a></div>`
       )
       .addTo(map);
   }
@@ -268,10 +285,22 @@ export default function MapBrowse({ places }: { places: P[] }) {
 
   const chips: [string, string][] = [
     ["all", "All"],
-    ["open", "Open"],
-    ["coming_soon", "Coming soon"],
+    ["open", `Open · ${stats.open}`],
+    ["coming_soon", `Coming soon · ${stats.soon}`],
     ["saved", savedCount ? `Saved · ${savedCount}` : "Saved"],
   ];
+
+  const topHoods = useMemo(() => neighborhoods.slice(0, 12), [neighborhoods]);
+  const topCats = useMemo(() => {
+    const m = new Map<string, { slug: string; label: string; n: number }>();
+    for (const p of places) {
+      if (p.status === "cancelled") continue;
+      const c = categoryOf(p.naics);
+      const e = m.get(c.slug) || { slug: c.slug, label: c.label, n: 0 };
+      e.n++; m.set(c.slug, e);
+    }
+    return [...m.values()].sort((a, b) => b.n - a.n);
+  }, [places]);
 
   return (
     <div className={`app view-${view}`}>
@@ -321,11 +350,12 @@ export default function MapBrowse({ places }: { places: P[] }) {
           {rows.map((p) => {
             const line = lineOf(p);
             const saved = isSaved(p.uniqueid);
+            const fresh = freshLabel(p);
             return (
               <Link key={p.uniqueid} className="card" href={`/openings/${p.slug}`}>
                 <div className="top">
                   <div className="cardmain">
-                    <div className="name">{nameOf(p)}</div>
+                    <div className="name">{nameOf(p)}{fresh && <span className="fresh">{fresh}</span>}</div>
                     <div className="hood">{p.neighborhood || "San Francisco"}</div>
                   </div>
                   <div className="cardright">
@@ -341,6 +371,27 @@ export default function MapBrowse({ places }: { places: P[] }) {
               </Link>
             );
           })}
+          {rows.length > 0 && (
+            <div className="listfoot">
+              <div className="lfgroup">
+                <div className="lfhead">Neighborhoods</div>
+                <div className="lflinks">
+                  {topHoods.map(([name]) => (
+                    <Link key={name} href={`/neighborhood/${slugify(name)}`}>{name}</Link>
+                  ))}
+                </div>
+              </div>
+              <div className="lfgroup">
+                <div className="lfhead">Categories</div>
+                <div className="lflinks">
+                  {topCats.map((c) => (
+                    <Link key={c.slug} href={`/category/${c.slug}`}>{c.label}</Link>
+                  ))}
+                </div>
+              </div>
+              <div className="lfcredit">Data from DataSF · confirmed via web search</div>
+            </div>
+          )}
         </div>
       </div>
       <div className="mapwrap" ref={mapEl} />

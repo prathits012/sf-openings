@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Place, slugFor, statusLabel } from "../lib/openings";
+import BrowseFooter from "./BrowseFooter";
 
 // Static, server-rendered list — used by the neighborhood & category SEO pages.
 export default function PlaceList({
@@ -37,6 +38,7 @@ export default function PlaceList({
           );
         })}
       </div>
+      <BrowseFooter />
     </div>
   );
 }

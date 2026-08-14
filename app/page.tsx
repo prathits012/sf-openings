@@ -9,10 +9,12 @@ export default function Home() {
     dba_name: p.dba_name,
     address: p.address,
     neighborhood: p.neighborhood,
+    naics: p.naics,
     lat: p.lat,
     lng: p.lng,
     status: p.status,
     permit_start: p.permit_start,
+    flipped_at: p.flipped_at,
     slug: slugFor(p),
     enrichment: p.enrichment,
   }));

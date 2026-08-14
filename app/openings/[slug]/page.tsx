@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { livePlaces, placeBySlug, slugFor, statusLabel, categoryOf, slugify } from "../../../lib/openings";
+import ShareButton from "./ShareButton";
+import BrowseFooter from "../../BrowseFooter";
 
 // Pre-render one static page per opening at build time — this is the SEO engine.
 export function generateStaticParams() {
@@ -80,26 +82,41 @@ export default async function OpeningPage({ params }: { params: Promise<{ slug: 
         );
       })()}
 
-      {e && (e.website || e.instagram) && (
-        <div className="links">
-          {e.website && <a href={e.website} target="_blank" rel="noopener noreferrer">Website</a>}
-          {e.instagram && (
-            <a href={e.instagram.startsWith("http") ? e.instagram : `https://instagram.com/${e.instagram.replace(/^@/, "")}`}
-               target="_blank" rel="noopener noreferrer">Instagram</a>
-          )}
-        </div>
-      )}
+      <div className="links">
+        <a
+          href={
+            p.lat != null
+              ? `https://www.google.com/maps/dir/?api=1&destination=${p.lat},${p.lng}`
+              : `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(p.address + ", San Francisco, CA")}`
+          }
+          target="_blank" rel="noopener noreferrer"
+        >Get directions</a>
+        <ShareButton title={`${name} — ${statusLabel(p.status)} in ${p.neighborhood || "SF"}`} />
+        {e && e.website && <a href={e.website} target="_blank" rel="noopener noreferrer">Website</a>}
+        {e && e.instagram && (
+          <a href={e.instagram.startsWith("http") ? e.instagram : `https://instagram.com/${e.instagram.replace(/^@/, "")}`}
+             target="_blank" rel="noopener noreferrer">Instagram</a>
+        )}
+      </div>
 
       {e && e.sources && e.sources.length > 0 && (
         <div className="src">
           Sources
-          {e.sources.slice(0, 5).map((s) => (
-            <a key={s} href={s} target="_blank" rel="noopener noreferrer">{s}</a>
-          ))}
+          {e.sources.slice(0, 6).map((s) => {
+            let label = s;
+            try {
+              const h = new URL(s).hostname.replace(/^www\./, "");
+              label = h.includes("vertexaisearch") || h.includes("grounding") ? "View source" : h;
+            } catch {}
+            return (
+              <a key={s} href={s} target="_blank" rel="noopener noreferrer">{label}</a>
+            );
+          })}
         </div>
       )}
 
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+      <BrowseFooter />
     </div>
   );
 }

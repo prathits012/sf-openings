@@ -3,7 +3,8 @@ import { ImageResponse } from "next/og";
 export const size = { width: 64, height: 64 };
 export const contentType = "image/png";
 
-// Favicon: green location pin on dark, matching the app.
+// Favicon: a green "pin" dot on dark — drawn as shapes (no font glyph, which
+// Satori can't always source).
 export default function Icon() {
   return new ImageResponse(
     (
@@ -16,11 +17,9 @@ export default function Icon() {
           justifyContent: "center",
           background: "#0d1117",
           borderRadius: 14,
-          color: "#3ddc84",
-          fontSize: 44,
         }}
       >
-        ◉
+        <div style={{ width: 30, height: 30, borderRadius: "50%", background: "#3ddc84" }} />
       </div>
     ),
     size

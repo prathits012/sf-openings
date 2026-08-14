@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { recentlyOpened, recentlyDiscovered, slugFor, statusLabel } from "../../lib/openings";
+import BrowseFooter from "../BrowseFooter";
 
 export const metadata: Metadata = {
   title: "Updates — new SF openings this week | New in SF",
@@ -81,6 +82,7 @@ export default async function UpdatesPage(
           })}
         </div>
       </div>
+      <BrowseFooter />
     </div>
   );
 }
