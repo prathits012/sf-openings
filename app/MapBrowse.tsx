@@ -32,7 +32,7 @@ const nameOf = (p: P) => (p.enrichment && p.enrichment.display_name) || p.dba_na
 
 export default function MapBrowse({ places }: { places: P[] }) {
   const [filter, setFilter] = useState("all");
-  const [selected, setSelected] = useState<string | null>(null);
+  const [view, setView] = useState<"list" | "map">("list"); // mobile only
   const mapEl = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<any>(null);
   const popupRef = useRef<any>(null);
@@ -99,7 +99,7 @@ export default function MapBrowse({ places }: { places: P[] }) {
           layers: [{ id: "c", type: "raster", source: "c" }],
         },
         center: [-122.437, 37.767],
-        zoom: 12,
+        zoom: 11.5,
       });
       mapRef.current = map;
       map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-right");
@@ -109,9 +109,9 @@ export default function MapBrowse({ places }: { places: P[] }) {
           id: "halo", type: "circle", source: "pts",
           filter: ["==", ["get", "story"], 1],
           paint: {
-            "circle-radius": 11,
+            "circle-radius": 12,
             "circle-color": ["match", ["get", "status"], "coming_soon", COLORS.coming_soon, COLORS.open],
-            "circle-opacity": 0.18,
+            "circle-opacity": 0.16,
           },
         });
         map.addLayer({
@@ -119,11 +119,11 @@ export default function MapBrowse({ places }: { places: P[] }) {
           paint: {
             "circle-radius": ["case", ["==", ["get", "story"], 1], 6, 4],
             "circle-color": ["match", ["get", "status"], "coming_soon", COLORS.coming_soon, COLORS.open],
-            "circle-stroke-width": 1.2,
+            "circle-stroke-width": 1.4,
             "circle-stroke-color": "#0d1117",
           },
         });
-        map.on("click", "dots", (e: any) => selectPlace(e.features[0].properties.id, true));
+        map.on("click", "dots", (e: any) => showPopup(e.features[0].properties.id));
         map.on("mouseenter", "dots", () => (map.getCanvas().style.cursor = "pointer"));
         map.on("mouseleave", "dots", () => (map.getCanvas().style.cursor = ""));
       });
@@ -141,28 +141,32 @@ export default function MapBrowse({ places }: { places: P[] }) {
     if (map && map.getSource && map.getSource("pts")) map.getSource("pts").setData(geo);
   }, [geo]);
 
-  function selectPlace(id: string, fly: boolean) {
-    setSelected(id);
+  function showPopup(id: string) {
     const p = byId[id];
     if (!p || p.lat == null) return;
     const map = mapRef.current;
     const maplibregl = glRef.current;
-    if (fly && map) map.flyTo({ center: [p.lng, p.lat], zoom: 15, speed: 0.8 });
-    if (map && maplibregl) {
-      if (popupRef.current) popupRef.current.remove();
-      const e = p.enrichment || {};
-      popupRef.current = new maplibregl.Popup({ offset: 14, closeButton: false })
-        .setLngLat([p.lng, p.lat])
-        .setHTML(
-          `<div class="pn">${esc(nameOf(p))}</div><div class="ph">${esc(p.neighborhood || "")} · ${statusLabel(p.status)}</div>` +
-            (e.description ? `<div class="pd">${esc(e.description)}</div>` : "")
-        )
-        .addTo(map);
+    if (!map || !maplibregl) return;
+    if (popupRef.current) popupRef.current.remove();
+    const e = p.enrichment || {};
+    popupRef.current = new maplibregl.Popup({ offset: 14, closeButton: true, maxWidth: "260px" })
+      .setLngLat([p.lng, p.lat])
+      .setHTML(
+        `<div class="pn">${esc(nameOf(p))}</div>` +
+          `<div class="ph">${esc(p.neighborhood || "")} · ${statusLabel(p.status)}</div>` +
+          (e.description ? `<div class="pd">${esc(e.description)}</div>` : "") +
+          `<a class="pl" href="/openings/${p.slug}">View details →</a>`
+      )
+      .addTo(map);
+  }
+
+  function toggleView() {
+    const next = view === "list" ? "map" : "list";
+    setView(next);
+    if (next === "map") {
+      // Map was display:none on mobile; give it size then repaint.
+      setTimeout(() => mapRef.current && mapRef.current.resize(), 60);
     }
-    setTimeout(() => {
-      const el = document.querySelector(".card.sel");
-      if (el) el.scrollIntoView({ block: "nearest", behavior: "smooth" });
-    }, 0);
   }
 
   const rows = useMemo(() => {
@@ -175,7 +179,7 @@ export default function MapBrowse({ places }: { places: P[] }) {
   }, [visible]);
 
   return (
-    <div className="app">
+    <div className={`app view-${view}`}>
       <div className="panel">
         <header>
           <div className="titlerow">
@@ -192,8 +196,8 @@ export default function MapBrowse({ places }: { places: P[] }) {
         <div className="filters">
           {[["all", "All"], ["open", "Open"], ["coming_soon", "Coming soon"], ["enriched", "Has story"]].map(
             ([s, label]) => (
-              <div key={s} className={"chip" + (filter === s ? " active" : "")} data-s={s}
-                   onClick={() => setFilter(s)}>{label}</div>
+              <button key={s} className={"chip" + (filter === s ? " active" : "")} data-s={s}
+                   onClick={() => setFilter(s)}>{label}</button>
             )
           )}
         </div>
@@ -206,8 +210,7 @@ export default function MapBrowse({ places }: { places: P[] }) {
             if (e.opening_date) meta.push(`opened ${e.opening_date}`);
             if (e.sources && e.sources.length) meta.push(`${e.sources.length} sources`);
             return (
-              <div key={p.uniqueid} className={"card" + (selected === p.uniqueid ? " sel" : "")}
-                   onClick={() => selectPlace(p.uniqueid, true)}>
+              <Link key={p.uniqueid} className="card" href={`/openings/${p.slug}`}>
                 <div className="top">
                   <div>
                     <div className="name">{nameOf(p)}</div>
@@ -221,15 +224,15 @@ export default function MapBrowse({ places }: { places: P[] }) {
                   <div className="tags">{e.tags.slice(0, 5).map((t: string) => <span key={t} className="tag">{t}</span>)}</div>
                 )}
                 {meta.length > 0 && <div className="meta">{meta.map((m) => <span key={m}>{m}</span>)}</div>}
-                <div className="meta">
-                  <Link href={`/openings/${p.slug}`} onClick={(ev) => ev.stopPropagation()}>View details →</Link>
-                </div>
-              </div>
+              </Link>
             );
           })}
         </div>
       </div>
       <div className="mapwrap" ref={mapEl} />
+      <button className="viewtoggle" onClick={toggleView}>
+        {view === "list" ? "Map" : "List"}
+      </button>
     </div>
   );
 }
