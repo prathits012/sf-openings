@@ -10,6 +10,15 @@ const COLORS: Record<string, string> = {
   coming_soon: "#f0b45e",
 };
 
+const tilesUrl = (t: string) =>
+  `https://basemaps.cartocdn.com/${t === "dark" ? "dark_all" : "light_all"}/{z}/{x}/{y}.png`;
+const CLUSTER: Record<string, { fill: string; stroke: string; text: string; halo: string }> = {
+  light: { fill: "#ffffff", stroke: "#c7cfd8", text: "#161b22", halo: "#0d1117" },
+  dark: { fill: "#1b2530", stroke: "#3a4756", text: "#e9edf1", halo: "#0d1117" },
+};
+const currentTheme = () =>
+  (typeof document !== "undefined" && document.documentElement.getAttribute("data-theme")) || "light";
+
 type P = {
   uniqueid: string;
   dba_name: string;
@@ -40,7 +49,28 @@ export default function MapBrowse({ places }: { places: P[] }) {
   const [view, setView] = useState<"list" | "map">("list"); // mobile only
   const [query, setQuery] = useState("");
   const [hood, setHood] = useState("all");
+  const [theme, setTheme] = useState<"light" | "dark">("light");
   const { toggle, isSaved, count: savedCount } = useSaves();
+
+  useEffect(() => setTheme(currentTheme() as "light" | "dark"), []);
+
+  function toggleTheme() {
+    const next = theme === "dark" ? "light" : "dark";
+    setTheme(next);
+    document.documentElement.setAttribute("data-theme", next);
+    try { localStorage.setItem("sf-theme", next); } catch {}
+    const m = mapRef.current;
+    if (m && m.getSource) {
+      const src = m.getSource("c");
+      if (src && src.setTiles) src.setTiles([tilesUrl(next)]);
+      if (m.getLayer("clusters")) {
+        m.setPaintProperty("clusters", "circle-color", CLUSTER[next].fill);
+        m.setPaintProperty("clusters", "circle-stroke-color", CLUSTER[next].stroke);
+      }
+      if (m.getLayer("cluster-count")) m.setPaintProperty("cluster-count", "text-color", CLUSTER[next].text);
+      if (m.getLayer("dots")) m.setPaintProperty("dots", "circle-stroke-color", CLUSTER[next].halo);
+    }
+  }
   const mapEl = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<any>(null);
   const popupRef = useRef<any>(null);
@@ -107,6 +137,7 @@ export default function MapBrowse({ places }: { places: P[] }) {
       const maplibregl = (await import("maplibre-gl")).default;
       if (cancelled || !mapEl.current) return;
       glRef.current = maplibregl;
+      const t0 = currentTheme();
       const map = new maplibregl.Map({
         container: mapEl.current,
         style: {
@@ -116,7 +147,7 @@ export default function MapBrowse({ places }: { places: P[] }) {
           sources: {
             c: {
               type: "raster",
-              tiles: ["https://basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png"],
+              tiles: [tilesUrl(t0)],
               tileSize: 256,
               attribution: "© OpenStreetMap © CARTO",
             },
@@ -141,8 +172,8 @@ export default function MapBrowse({ places }: { places: P[] }) {
           id: "clusters", type: "circle", source: "pts",
           filter: ["has", "point_count"],
           paint: {
-            "circle-color": "#1b2530",
-            "circle-stroke-color": "#3a4756",
+            "circle-color": CLUSTER[t0].fill,
+            "circle-stroke-color": CLUSTER[t0].stroke,
             "circle-stroke-width": 1,
             "circle-radius": ["step", ["get", "point_count"], 16, 10, 22, 30, 30],
           },
@@ -152,7 +183,7 @@ export default function MapBrowse({ places }: { places: P[] }) {
           filter: ["has", "point_count"],
           layout: { "text-field": ["get", "point_count_abbreviated"], "text-size": 13,
             "text-font": ["Open Sans Semibold"] },
-          paint: { "text-color": "#e9edf1" },
+          paint: { "text-color": CLUSTER[t0].text },
         });
         // Individual points
         map.addLayer({
@@ -248,7 +279,13 @@ export default function MapBrowse({ places }: { places: P[] }) {
         <header>
           <div className="titlerow">
             <h1>New in <span className="g">SF</span></h1>
-            <Link href="/updates" className="updatesLink">Updates →</Link>
+            <div className="titleright">
+              <button className="themebtn" onClick={toggleTheme}
+                      aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}>
+                {theme === "dark" ? "☀" : "☾"}
+              </button>
+              <Link href="/updates" className="updatesLink">Updates →</Link>
+            </div>
           </div>
           <p className="sub">Cafes &amp; retail opening across the city — from permit filings, confirmed live.</p>
           <div className="stats">

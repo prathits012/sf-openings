@@ -1,8 +1,14 @@
+/* Light is the default. Dark is opt-in via [data-theme="dark"] on <html>. */
 :root{
+  --bg:#f6f7f9; --panel:#ffffff; --panel2:#eef1f4; --line:#e3e7ec;
+  --ink:#161b22; --soft:#54606d; --fog:#8b95a1;
+  --soon:#b26a12; --open:#178a49;
+  --sans:ui-sans-serif,-apple-system,"Segoe UI",Helvetica,Arial,sans-serif;
+}
+:root[data-theme="dark"]{
   --bg:#0d1117; --panel:#141b24; --panel2:#1b2530; --line:#26313c;
   --ink:#e9edf1; --soft:#9aa6b2; --fog:#6b7783;
   --soon:#f0b45e; --open:#3ddc84;
-  --sans:ui-sans-serif,-apple-system,"Segoe UI",Helvetica,Arial,sans-serif;
 }
 *{box-sizing:border-box}
 html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font-family:var(--sans)}
@@ -28,10 +34,15 @@ a{color:inherit}
 }
 .panel header{padding:18px 18px 12px;border-bottom:1px solid var(--line)}
 .panel h1{margin:0;font-size:1.35rem;letter-spacing:-.02em;font-weight:800}
-.panel h1 .g{color:var(--open);text-shadow:0 0 18px rgba(61,220,132,.45)}
-.titlerow{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+.panel h1 .g{color:var(--open)}
+:root[data-theme="dark"] .panel h1 .g{text-shadow:0 0 18px rgba(61,220,132,.45)}
+.titlerow{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.titleright{display:flex;align-items:center;gap:12px}
 .updatesLink{font-size:.78rem;color:var(--soft);text-decoration:none;font-weight:600}
 .updatesLink:hover{color:var(--ink)}
+.themebtn{background:none;border:1px solid var(--line);border-radius:8px;color:var(--soft);
+  cursor:pointer;font-size:.9rem;line-height:1;padding:5px 8px}
+.themebtn:hover{color:var(--ink);border-color:var(--soft)}
 .sub{margin:4px 0 0;color:var(--soft);font-size:.82rem}
 .stats{display:flex;gap:16px;margin-top:12px}
 .stat .n{font-size:1.15rem;font-weight:700;font-variant-numeric:tabular-nums}
@@ -116,7 +127,8 @@ a{color:inherit}
 .updates{max-width:720px;margin:0 auto;padding:40px 22px 80px}
 .updates .top{display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:14px}
 .updates h1{font-size:2rem;letter-spacing:-.03em;margin:14px 0 0}
-.updates .g{color:var(--open);text-shadow:0 0 18px rgba(61,220,132,.4)}
+.updates .g{color:var(--open)}
+:root[data-theme="dark"] .updates .g{text-shadow:0 0 18px rgba(61,220,132,.4)}
 .updates .sub{color:var(--soft);font-size:.9rem;margin-top:6px}
 .rangepick{display:flex;gap:6px}
 .rangepick a{border:1px solid var(--line);border-radius:999px;padding:6px 14px;font-size:.8rem;
