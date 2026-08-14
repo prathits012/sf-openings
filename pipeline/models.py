@@ -50,6 +50,7 @@ class Place:
     status: str = COMING_SOON
     first_seen: Optional[str] = None     # when the pipeline first saw it (ISO)
     last_checked: Optional[str] = None   # last enrichment/recheck (ISO)
+    flipped_at: Optional[str] = None     # when status last became open/just_opened (ISO)
     enrichment: Optional[Dict[str, Any]] = None  # Enrichment.to_dict()
 
     def to_dict(self) -> Dict[str, Any]:

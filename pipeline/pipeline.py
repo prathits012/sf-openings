@@ -100,6 +100,8 @@ def run(enrich_limit: int = None) -> dict:
         # exactly when we want to correct a wrong status.
         if verdict in (JUST_OPENED, OPEN) and confident:
             p.status = verdict
+            if prior_status not in (JUST_OPENED, OPEN):
+                p.flipped_at = now_iso()  # the moment it became open — feeds the Updates page
         else:
             p.status = COMING_SOON
         # Always keep the latest card content (even while still coming_soon we

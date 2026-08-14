@@ -30,6 +30,7 @@ export type Place = {
   status: string;
   first_seen: string | null;
   last_checked: string | null;
+  flipped_at: string | null;
   enrichment: Enrichment | null;
 };
 
@@ -75,6 +76,29 @@ export function slugFor(p: Place): string {
 
 export function placeBySlug(slug: string): Place | undefined {
   return livePlaces().find((p) => slugFor(p) === slug);
+}
+
+function withinDays(iso: string | null, days: number): boolean {
+  if (!iso) return false;
+  const t = new Date(iso).getTime();
+  if (Number.isNaN(t)) return false;
+  return Date.now() - t <= days * 24 * 60 * 60 * 1000;
+}
+
+// Places that FLIPPED to open/just_opened within the window — the "it's open,
+// go now" feed. Sorted newest flip first.
+export function recentlyOpened(days: number): Place[] {
+  return livePlaces()
+    .filter((p) => (p.status === "open" || p.status === "just_opened") && withinDays(p.flipped_at, days))
+    .sort((a, b) => (b.flipped_at || "").localeCompare(a.flipped_at || ""));
+}
+
+// Brand-new candidates the pipeline spotted (permit filed) within the window,
+// still coming soon — the "advance" feed. Sorted newest discovery first.
+export function recentlyDiscovered(days: number): Place[] {
+  return livePlaces()
+    .filter((p) => p.status === "coming_soon" && withinDays(p.first_seen, days))
+    .sort((a, b) => (b.first_seen || "").localeCompare(a.first_seen || ""));
 }
 
 export function statusLabel(s: string): string {

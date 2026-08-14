@@ -15,6 +15,9 @@ a{color:inherit}
 .panel header{padding:18px 18px 12px;border-bottom:1px solid var(--line)}
 .panel h1{margin:0;font-size:1.35rem;letter-spacing:-.02em;font-weight:800}
 .panel h1 .g{color:var(--open);text-shadow:0 0 18px rgba(61,220,132,.45)}
+.titlerow{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+.updatesLink{font-size:.78rem;color:var(--soft);text-decoration:none;font-weight:600}
+.updatesLink:hover{color:var(--ink)}
 .sub{margin:4px 0 0;color:var(--soft);font-size:.82rem}
 .stats{display:flex;gap:16px;margin-top:12px}
 .stat .n{font-size:1.15rem;font-weight:700;font-variant-numeric:tabular-nums}
@@ -69,3 +72,27 @@ a{color:inherit}
 .detail .links a:hover{border-color:var(--soft)}
 .detail .src{margin-top:26px;font-size:.78rem;color:var(--fog)}
 .detail .src a{color:var(--soft);display:block;margin-top:3px;overflow-wrap:anywhere}
+
+/* ---- updates feed ---- */
+.updates{max-width:720px;margin:0 auto;padding:40px 22px 80px}
+.updates .top{display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:14px}
+.updates h1{font-size:2rem;letter-spacing:-.03em;margin:14px 0 0}
+.updates .g{color:var(--open);text-shadow:0 0 18px rgba(61,220,132,.4)}
+.updates .sub{color:var(--soft);font-size:.9rem;margin-top:6px}
+.rangepick{display:flex;gap:6px}
+.rangepick a{border:1px solid var(--line);border-radius:999px;padding:6px 14px;font-size:.8rem;
+  color:var(--soft);text-decoration:none;font-weight:600}
+.rangepick a.on{color:var(--ink);border-color:var(--soft)}
+.section{margin-top:36px}
+.section h2{font-size:.78rem;letter-spacing:.1em;text-transform:uppercase;color:var(--fog);
+  margin:0 0 14px;padding-top:18px;border-top:1px solid var(--line)}
+.section h2 .n{color:var(--ink);font-weight:800;font-variant-numeric:tabular-nums}
+.urow{display:flex;flex-direction:column;gap:10px}
+.uitem{display:block;text-decoration:none;color:inherit;background:var(--panel);
+  border:1px solid var(--line);border-radius:10px;padding:12px 14px}
+.uitem:hover{border-color:var(--soft)}
+.uitem .r1{display:flex;justify-content:space-between;gap:10px;align-items:baseline}
+.uitem .nm{font-weight:700;font-size:.95rem}
+.uitem .wh{color:var(--fog);font-size:.72rem;white-space:nowrap}
+.uitem .hk{color:var(--soft);font-size:.82rem;margin-top:5px;line-height:1.4}
+.updates .empty{color:var(--fog);font-size:.85rem;padding:6px 0}

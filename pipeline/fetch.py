@@ -11,12 +11,17 @@ from typing import Dict, List
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
+import re
+
 from config import (
     DATASF_RESOURCE,
     DISCOVERY_SINCE,
     NAICS_INCLUDE_PREFIXES,
     VENUE_ARTIFACT_ADDRESS_TOKENS,
+    RESIDENTIAL_NAME_PATTERN,
 )
+
+_RESIDENTIAL_RE = re.compile(RESIDENTIAL_NAME_PATTERN, re.IGNORECASE)
 from models import Place
 from store import now_iso
 
@@ -105,6 +110,8 @@ def discover(page_size: int = 1000, max_pages: int = 20) -> List[Place]:
     seen_natural = set()
     for row in rows:
         if _is_venue_artifact(row):
+            continue
+        if _RESIDENTIAL_RE.search(row.get("dba_name") or ""):
             continue
         p = _to_place(row)
         if p.uniqueid in places:

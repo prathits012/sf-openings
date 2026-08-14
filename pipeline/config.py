@@ -80,6 +80,12 @@ NAICS_EXCLUDE_PREFIXES = ("441", "444", "447", "457", "454")
 # register with same-day start==end at these venue addresses. Drop them.
 VENUE_ARTIFACT_ADDRESS_TOKENS = ("willie mays", "warriors way")
 
+# A handful of apartment/residential leasing offices self-report under retail
+# NAICS codes (e.g. 445132) that don't actually match "apartment leasing" —
+# businesses pick the nearest available code when registering. Catch by name
+# since it's a small, high-precision signal; NAICS alone can't distinguish them.
+RESIDENTIAL_NAME_PATTERN = r"\b(apartments?|residences?|amenities|leasing office)\b"
+
 # ---------------------------------------------------------------------------
 # Ghost pruning
 # ---------------------------------------------------------------------------

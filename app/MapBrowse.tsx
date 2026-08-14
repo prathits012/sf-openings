@@ -178,7 +178,10 @@ export default function MapBrowse({ places }: { places: P[] }) {
     <div className="app">
       <div className="panel">
         <header>
-          <h1>New in <span className="g">SF</span></h1>
+          <div className="titlerow">
+            <h1>New in <span className="g">SF</span></h1>
+            <Link href="/updates" className="updatesLink">Updates →</Link>
+          </div>
           <p className="sub">Cafes &amp; retail opening across the city — from permit filings, confirmed live.</p>
           <div className="stats">
             <div className="stat"><div className="n">{stats.total}</div><div className="l">tracked</div></div>
