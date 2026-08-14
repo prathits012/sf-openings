@@ -1,0 +1,11 @@
+# Explicit phases so Railway builds this as a PYTHON service, not Node — the
+# repo also has package.json (that's for Vercel/Next.js) which nixpacks could
+# otherwise auto-detect first.
+[phases.setup]
+nixPkgs = ["python311", "git"]
+
+[phases.install]
+cmds = ["pip install -r requirements.txt"]
+
+[start]
+cmd = "python pipeline/daily_sync.py"

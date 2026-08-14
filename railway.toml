@@ -2,8 +2,10 @@
 builder = "nixpacks"
 
 [deploy]
-# Weekly on Monday 08:00 UTC. openings.json persists between runs via a Railway
-# volume mounted at ./data (set DATA_DIR to the mount path if different).
-startCommand = "python pipeline/pipeline.py"
-cronSchedule = "0 8 * * 1"
+# 13:00 UTC = 6am Pacific (PDT) — a fresh feed by the time anyone checks in the
+# morning. GitHub is the durable store (Railway's filesystem is ephemeral): each
+# run clones fresh, merges the day's delta, and pushes only if something changed.
+# See pipeline/daily_sync.py. Vercel auto-deploys on that push.
+startCommand = "python pipeline/daily_sync.py"
+cronSchedule = "0 13 * * *"
 restartPolicyType = "never"
