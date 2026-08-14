@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { livePlaces, placeBySlug, slugFor, statusLabel } from "../../../lib/openings";
+import { livePlaces, placeBySlug, slugFor, statusLabel, categoryOf, slugify } from "../../../lib/openings";
 
 // Pre-render one static page per opening at build time — this is the SEO engine.
 export function generateStaticParams() {
@@ -61,12 +61,24 @@ export default async function OpeningPage({ params }: { params: Promise<{ slug: 
         <div className="tags">{e.tags.map((t) => <span key={t} className="tag">{t}</span>)}</div>
       )}
 
-      <dl className="facts">
-        <dt>Status</dt><dd>{statusLabel(p.status)}</dd>
-        {e && e.opening_date && (<><dt>Opened</dt><dd>{e.opening_date}</dd></>)}
-        {p.permit_start && (<><dt>Permit filed</dt><dd>{p.permit_start}</dd></>)}
-        <dt>Neighborhood</dt><dd>{p.neighborhood || "San Francisco"}</dd>
-      </dl>
+      {(() => {
+        const cat = categoryOf(p.naics);
+        return (
+          <dl className="facts">
+            <dt>Status</dt><dd>{statusLabel(p.status)}</dd>
+            {e && e.opening_date && (<><dt>Opened</dt><dd>{e.opening_date}</dd></>)}
+            {p.permit_start && (<><dt>Permit filed</dt><dd>{p.permit_start}</dd></>)}
+            <dt>Category</dt>
+            <dd><Link className="factlink" href={`/category/${cat.slug}`}>{cat.label}</Link></dd>
+            <dt>Neighborhood</dt>
+            <dd>
+              {p.neighborhood
+                ? <Link className="factlink" href={`/neighborhood/${slugify(p.neighborhood)}`}>{p.neighborhood}</Link>
+                : "San Francisco"}
+            </dd>
+          </dl>
+        );
+      })()}
 
       {e && (e.website || e.instagram) && (
         <div className="links">

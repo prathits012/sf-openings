@@ -37,7 +37,14 @@ a{color:inherit}
 .stat .n{font-size:1.15rem;font-weight:700;font-variant-numeric:tabular-nums}
 .stat .l{font-size:.68rem;letter-spacing:.08em;text-transform:uppercase;color:var(--fog)}
 .stat .n.open{color:var(--open)} .stat .n.soon{color:var(--soon)}
-.filters{display:flex;gap:8px;padding:12px 18px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.controls{padding:12px 18px;border-bottom:1px solid var(--line);display:flex;flex-direction:column;gap:9px}
+.search,.hoodsel{width:100%;background:var(--panel);border:1px solid var(--line);border-radius:9px;
+  color:var(--ink);font-family:var(--sans);font-size:.85rem;padding:9px 11px;outline:none}
+.search::placeholder{color:var(--fog)}
+.search:focus,.hoodsel:focus{border-color:var(--soft)}
+.hoodsel{appearance:none;cursor:pointer;background-image:linear-gradient(45deg,transparent 50%,var(--fog) 50%),linear-gradient(135deg,var(--fog) 50%,transparent 50%);background-position:calc(100% - 16px) 55%,calc(100% - 11px) 55%;background-size:5px 5px,5px 5px;background-repeat:no-repeat}
+.hoodsel option{background:var(--panel);color:var(--ink)}
+.filters{display:flex;gap:7px;flex-wrap:wrap;margin-top:1px}
 .chip{border:1px solid var(--line);background:var(--panel);color:var(--soft);border-radius:999px;
   padding:6px 12px;font-size:.78rem;cursor:pointer;font-weight:600;font-family:var(--sans)}
 .chip.active{color:var(--ink);border-color:var(--soft)}
@@ -47,13 +54,21 @@ a{color:inherit}
 .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px;cursor:pointer;transition:border-color .15s,background .15s;text-decoration:none;display:block;color:inherit}
 .card:hover{border-color:var(--soft);background:var(--panel2)}
 .card .top{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
+.card .cardmain{min-width:0}
+.card .cardright{display:flex;align-items:center;gap:8px;flex:none}
 .card .name{font-weight:700;font-size:1rem;letter-spacing:-.01em}
 .card .hood{color:var(--fog);font-size:.76rem;margin-top:2px}
+.savebtn{background:none;border:none;cursor:pointer;font-size:1.15rem;line-height:1;color:var(--fog);
+  padding:2px 4px;transition:color .12s,transform .1s}
+.savebtn:hover{color:var(--soft)}
+.savebtn.on{color:#ff6b81}
+.savebtn:active{transform:scale(1.25)}
 .badge{flex:none;font-size:.64rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;
   padding:4px 8px;border-radius:999px;white-space:nowrap}
 .badge.open{color:var(--open);background:rgba(61,220,132,.12);border:1px solid rgba(61,220,132,.35)}
 .badge.coming_soon{color:var(--soon);background:rgba(240,180,94,.12);border:1px solid rgba(240,180,94,.3)}
-.card .hook{margin:9px 0 0;font-size:.86rem;color:var(--ink);line-height:1.4}
+.card .hook{margin:8px 0 0;font-size:.84rem;color:var(--soft);line-height:1.45;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .card .desc{margin:6px 0 0;font-size:.8rem;color:var(--soft);line-height:1.45}
 .card .tags{margin-top:9px;display:flex;gap:6px;flex-wrap:wrap}
 .tag{font-size:.66rem;color:var(--soft);background:var(--panel2);border:1px solid var(--line);border-radius:5px;padding:2px 7px}
@@ -83,6 +98,14 @@ a{color:inherit}
 .detail .facts{margin:26px 0 0;border-top:1px solid var(--line);padding-top:18px;display:grid;
   grid-template-columns:auto 1fr;gap:8px 18px;font-size:.9rem}
 .detail .facts dt{color:var(--fog)} .detail .facts dd{margin:0}
+.factlink{color:var(--ink);text-decoration:none;border-bottom:1px solid var(--line)}
+.factlink:hover{border-bottom-color:var(--soft)}
+
+/* ---- neighborhood / category listing pages ---- */
+.listing{max-width:720px;margin:0 auto;padding:40px 22px 80px}
+.listing h1{font-size:2rem;letter-spacing:-.03em;margin:14px 0 0;text-wrap:balance}
+.lsub{color:var(--soft);font-size:.9rem;margin-top:6px}
+.lrows{margin-top:26px;display:flex;flex-direction:column;gap:10px}
 .detail .links{margin-top:22px;display:flex;gap:12px}
 .detail .links a{border:1px solid var(--line);border-radius:8px;padding:8px 14px;font-size:.85rem;text-decoration:none;color:var(--ink)}
 .detail .links a:hover{border-color:var(--soft)}

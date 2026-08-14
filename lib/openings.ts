@@ -106,3 +106,60 @@ export function statusLabel(s: string): string {
   if (s === "just_opened") return "Just opened";
   return "Open";
 }
+
+// Human category derived from the NAICS code (self-reported, both vintages).
+export function categoryOf(naics: string): { slug: string; label: string } {
+  const n = naics || "";
+  if (n.startsWith("722515")) return { slug: "cafes", label: "Cafés & coffee" };
+  if (n.startsWith("7224") || n.startsWith("722410")) return { slug: "bars", label: "Bars" };
+  if (n.startsWith("722")) return { slug: "restaurants", label: "Restaurants" };
+  if (n.startsWith("445")) return { slug: "food-grocery", label: "Food & grocery" };
+  if (n.startsWith("448") || n.startsWith("458")) return { slug: "clothing", label: "Clothing & apparel" };
+  if (n.startsWith("451") || n.startsWith("459")) return { slug: "gifts", label: "Books, gifts & hobby" };
+  if (n.startsWith("446") || n.startsWith("456")) return { slug: "health-beauty", label: "Health & beauty" };
+  if (n.startsWith("442") || n.startsWith("449")) return { slug: "home", label: "Home & electronics" };
+  if (n.startsWith("452") || n.startsWith("455")) return { slug: "general", label: "General retail" };
+  if (n.startsWith("453")) return { slug: "specialty", label: "Specialty retail" };
+  return { slug: "shops", label: "Shops" };
+}
+
+// Feed sort: enriched first, then open, then newest permit.
+export function sortForFeed(places: Place[]): Place[] {
+  return places.slice().sort((a, b) => {
+    const sa = (hasStory(a) ? 2 : 0) + (a.status !== "coming_soon" ? 1 : 0);
+    const sb = (hasStory(b) ? 2 : 0) + (b.status !== "coming_soon" ? 1 : 0);
+    if (sa !== sb) return sb - sa;
+    return (b.permit_start || "").localeCompare(a.permit_start || "");
+  });
+}
+
+export function allNeighborhoods(): { slug: string; name: string; count: number }[] {
+  const m = new Map<string, { slug: string; name: string; count: number }>();
+  for (const p of livePlaces()) {
+    if (!p.neighborhood) continue;
+    const slug = slugify(p.neighborhood);
+    const e = m.get(slug) || { slug, name: p.neighborhood, count: 0 };
+    e.count++;
+    m.set(slug, e);
+  }
+  return [...m.values()].sort((a, b) => b.count - a.count);
+}
+
+export function allCategories(): { slug: string; label: string; count: number }[] {
+  const m = new Map<string, { slug: string; label: string; count: number }>();
+  for (const p of livePlaces()) {
+    const c = categoryOf(p.naics);
+    const e = m.get(c.slug) || { slug: c.slug, label: c.label, count: 0 };
+    e.count++;
+    m.set(c.slug, e);
+  }
+  return [...m.values()].sort((a, b) => b.count - a.count);
+}
+
+export function placesInNeighborhood(slug: string): Place[] {
+  return sortForFeed(livePlaces().filter((p) => p.neighborhood && slugify(p.neighborhood) === slug));
+}
+
+export function placesInCategory(slug: string): Place[] {
+  return sortForFeed(livePlaces().filter((p) => categoryOf(p.naics).slug === slug));
+}

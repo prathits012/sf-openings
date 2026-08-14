@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
+import { useSaves } from "../lib/useSaves";
 
 const COLORS: Record<string, string> = {
   open: "#3ddc84",
@@ -29,10 +30,17 @@ const hasStory = (p: P) =>
   !!(p.enrichment && p.enrichment.model && p.enrichment.model !== "stub-no-key" &&
      (p.enrichment.description || p.enrichment.hook));
 const nameOf = (p: P) => (p.enrichment && p.enrichment.display_name) || p.dba_name;
+const lineOf = (p: P) => {
+  const e = p.enrichment || {};
+  return e.hook || e.description || null; // feed shows ONE line; full text on detail
+};
 
 export default function MapBrowse({ places }: { places: P[] }) {
   const [filter, setFilter] = useState("all");
   const [view, setView] = useState<"list" | "map">("list"); // mobile only
+  const [query, setQuery] = useState("");
+  const [hood, setHood] = useState("all");
+  const { toggle, isSaved, count: savedCount } = useSaves();
   const mapEl = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<any>(null);
   const popupRef = useRef<any>(null);
@@ -44,15 +52,30 @@ export default function MapBrowse({ places }: { places: P[] }) {
     return m;
   }, [places]);
 
+  const neighborhoods = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const p of places) {
+      if (p.status === "cancelled" || !p.neighborhood) continue;
+      m.set(p.neighborhood, (m.get(p.neighborhood) || 0) + 1);
+    }
+    return [...m.entries()].sort((a, b) => b[1] - a[1]);
+  }, [places]);
+
   const visible = useMemo(() => {
+    const q = query.trim().toLowerCase();
     return places.filter((p) => {
       if (p.status === "cancelled") return false;
-      if (filter === "open") return p.status === "open" || p.status === "just_opened";
-      if (filter === "coming_soon") return p.status === "coming_soon";
-      if (filter === "enriched") return hasStory(p);
+      if (filter === "open" && !(p.status === "open" || p.status === "just_opened")) return false;
+      if (filter === "coming_soon" && p.status !== "coming_soon") return false;
+      if (filter === "saved" && !isSaved(p.uniqueid)) return false;
+      if (hood !== "all" && p.neighborhood !== hood) return false;
+      if (q) {
+        const hay = `${nameOf(p)} ${p.neighborhood || ""} ${p.address}`.toLowerCase();
+        if (!hay.includes(q)) return false;
+      }
       return true;
     });
-  }, [places, filter]);
+  }, [places, filter, hood, query, isSaved]);
 
   const stats = useMemo(() => {
     const live = places.filter((p) => p.status !== "cancelled");
@@ -77,7 +100,7 @@ export default function MapBrowse({ places }: { places: P[] }) {
     [visible]
   );
 
-  // init map once
+  // init map once — with clustering so 300+ pins don't overlap into noise
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -88,6 +111,8 @@ export default function MapBrowse({ places }: { places: P[] }) {
         container: mapEl.current,
         style: {
           version: 8,
+          // Glyphs so the cluster-count text can render (raster styles have none).
+          glyphs: "https://fonts.openmaptiles.org/{fontstack}/{range}.pbf",
           sources: {
             c: {
               type: "raster",
@@ -104,10 +129,35 @@ export default function MapBrowse({ places }: { places: P[] }) {
       mapRef.current = map;
       map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-right");
       map.on("load", () => {
-        map.addSource("pts", { type: "geojson", data: geo as any });
+        map.addSource("pts", {
+          type: "geojson",
+          data: geo as any,
+          cluster: true,
+          clusterRadius: 46,
+          clusterMaxZoom: 15,
+        });
+        // Cluster bubbles
+        map.addLayer({
+          id: "clusters", type: "circle", source: "pts",
+          filter: ["has", "point_count"],
+          paint: {
+            "circle-color": "#1b2530",
+            "circle-stroke-color": "#3a4756",
+            "circle-stroke-width": 1,
+            "circle-radius": ["step", ["get", "point_count"], 16, 10, 22, 30, 30],
+          },
+        });
+        map.addLayer({
+          id: "cluster-count", type: "symbol", source: "pts",
+          filter: ["has", "point_count"],
+          layout: { "text-field": ["get", "point_count_abbreviated"], "text-size": 13,
+            "text-font": ["Open Sans Semibold"] },
+          paint: { "text-color": "#e9edf1" },
+        });
+        // Individual points
         map.addLayer({
           id: "halo", type: "circle", source: "pts",
-          filter: ["==", ["get", "story"], 1],
+          filter: ["all", ["!", ["has", "point_count"]], ["==", ["get", "story"], 1]],
           paint: {
             "circle-radius": 12,
             "circle-color": ["match", ["get", "status"], "coming_soon", COLORS.coming_soon, COLORS.open],
@@ -116,6 +166,7 @@ export default function MapBrowse({ places }: { places: P[] }) {
         });
         map.addLayer({
           id: "dots", type: "circle", source: "pts",
+          filter: ["!", ["has", "point_count"]],
           paint: {
             "circle-radius": ["case", ["==", ["get", "story"], 1], 6, 4],
             "circle-color": ["match", ["get", "status"], "coming_soon", COLORS.coming_soon, COLORS.open],
@@ -123,9 +174,19 @@ export default function MapBrowse({ places }: { places: P[] }) {
             "circle-stroke-color": "#0d1117",
           },
         });
+        map.on("click", "clusters", (e: any) => {
+          const f: any = map.queryRenderedFeatures(e.point, { layers: ["clusters"] })[0];
+          const id = f.properties.cluster_id;
+          (map.getSource("pts") as any).getClusterExpansionZoom(id, (err: any, zoom: number) => {
+            if (err) return;
+            map.easeTo({ center: f.geometry.coordinates, zoom });
+          });
+        });
         map.on("click", "dots", (e: any) => showPopup(e.features[0].properties.id));
-        map.on("mouseenter", "dots", () => (map.getCanvas().style.cursor = "pointer"));
-        map.on("mouseleave", "dots", () => (map.getCanvas().style.cursor = ""));
+        for (const layer of ["clusters", "dots"]) {
+          map.on("mouseenter", layer, () => (map.getCanvas().style.cursor = "pointer"));
+          map.on("mouseleave", layer, () => (map.getCanvas().style.cursor = ""));
+        }
       });
     })();
     return () => {
@@ -135,7 +196,6 @@ export default function MapBrowse({ places }: { places: P[] }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // update source when filter changes
   useEffect(() => {
     const map = mapRef.current;
     if (map && map.getSource && map.getSource("pts")) map.getSource("pts").setData(geo);
@@ -154,7 +214,7 @@ export default function MapBrowse({ places }: { places: P[] }) {
       .setHTML(
         `<div class="pn">${esc(nameOf(p))}</div>` +
           `<div class="ph">${esc(p.neighborhood || "")} · ${statusLabel(p.status)}</div>` +
-          (e.description ? `<div class="pd">${esc(e.description)}</div>` : "") +
+          (e.hook || e.description ? `<div class="pd">${esc(e.hook || e.description)}</div>` : "") +
           `<a class="pl" href="/openings/${p.slug}">View details →</a>`
       )
       .addTo(map);
@@ -163,10 +223,7 @@ export default function MapBrowse({ places }: { places: P[] }) {
   function toggleView() {
     const next = view === "list" ? "map" : "list";
     setView(next);
-    if (next === "map") {
-      // Map was display:none on mobile; give it size then repaint.
-      setTimeout(() => mapRef.current && mapRef.current.resize(), 60);
-    }
+    if (next === "map") setTimeout(() => mapRef.current && mapRef.current.resize(), 60);
   }
 
   const rows = useMemo(() => {
@@ -177,6 +234,13 @@ export default function MapBrowse({ places }: { places: P[] }) {
       return (b.permit_start || "").localeCompare(a.permit_start || "");
     });
   }, [visible]);
+
+  const chips: [string, string][] = [
+    ["all", "All"],
+    ["open", "Open"],
+    ["coming_soon", "Coming soon"],
+    ["saved", savedCount ? `Saved · ${savedCount}` : "Saved"],
+  ];
 
   return (
     <div className={`app view-${view}`}>
@@ -193,46 +257,57 @@ export default function MapBrowse({ places }: { places: P[] }) {
             <div className="stat"><div className="n soon">{stats.soon}</div><div className="l">coming soon</div></div>
           </div>
         </header>
-        <div className="filters">
-          {[["all", "All"], ["open", "Open"], ["coming_soon", "Coming soon"], ["enriched", "Has story"]].map(
-            ([s, label]) => (
+        <div className="controls">
+          <input className="search" type="search" placeholder="Search name or neighborhood…"
+                 value={query} onChange={(e) => setQuery(e.target.value)} />
+          <select className="hoodsel" value={hood} onChange={(e) => setHood(e.target.value)}>
+            <option value="all">All neighborhoods</option>
+            {neighborhoods.map(([name, n]) => (
+              <option key={name} value={name}>{name} ({n})</option>
+            ))}
+          </select>
+          <div className="filters">
+            {chips.map(([s, label]) => (
               <button key={s} className={"chip" + (filter === s ? " active" : "")} data-s={s}
                    onClick={() => setFilter(s)}>{label}</button>
-            )
-          )}
+            ))}
+          </div>
         </div>
         <div className="list">
-          {rows.length === 0 && <div className="empty">No places match.</div>}
+          {rows.length === 0 && (
+            <div className="empty">
+              {filter === "saved" && savedCount === 0
+                ? "Tap the heart on any place to save it here."
+                : "No places match."}
+            </div>
+          )}
           {rows.map((p) => {
-            const e = p.enrichment || {};
-            const meta: string[] = [];
-            if (hasStory(p)) meta.push(`confidence ${Math.round((e.confidence || 0) * 100)}%`);
-            if (e.opening_date) meta.push(`opened ${e.opening_date}`);
-            if (e.sources && e.sources.length) meta.push(`${e.sources.length} sources`);
+            const line = lineOf(p);
+            const saved = isSaved(p.uniqueid);
             return (
               <Link key={p.uniqueid} className="card" href={`/openings/${p.slug}`}>
                 <div className="top">
-                  <div>
+                  <div className="cardmain">
                     <div className="name">{nameOf(p)}</div>
-                    <div className="hood">{p.neighborhood || "San Francisco"} · {p.address}</div>
+                    <div className="hood">{p.neighborhood || "San Francisco"}</div>
                   </div>
-                  <span className={"badge " + statusClass(p.status)}>{statusLabel(p.status)}</span>
+                  <div className="cardright">
+                    <span className={"badge " + statusClass(p.status)}>{statusLabel(p.status)}</span>
+                    <button
+                      className={"savebtn" + (saved ? " on" : "")}
+                      aria-label={saved ? "Remove from saved" : "Save"}
+                      onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggle(p.uniqueid); }}
+                    >{saved ? "♥" : "♡"}</button>
+                  </div>
                 </div>
-                {e.hook && <div className="hook">{e.hook}</div>}
-                {e.description && <div className="desc">{e.description}</div>}
-                {e.tags && e.tags.length > 0 && (
-                  <div className="tags">{e.tags.slice(0, 5).map((t: string) => <span key={t} className="tag">{t}</span>)}</div>
-                )}
-                {meta.length > 0 && <div className="meta">{meta.map((m) => <span key={m}>{m}</span>)}</div>}
+                {line && <div className="hook">{line}</div>}
               </Link>
             );
           })}
         </div>
       </div>
       <div className="mapwrap" ref={mapEl} />
-      <button className="viewtoggle" onClick={toggleView}>
-        {view === "list" ? "Map" : "List"}
-      </button>
+      <button className="viewtoggle" onClick={toggleView}>{view === "list" ? "Map" : "List"}</button>
     </div>
   );
 }
